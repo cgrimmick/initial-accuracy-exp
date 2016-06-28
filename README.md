@@ -1,2 +1,2 @@
-# memory_vs_xsl
-Experiment to compare flash card study (i.e., paired associate learning) to cross-situational study (2 pairs per trial).
+# initial-accuracy-exp
+Experiment to compare cross-situational learning in high- vs. low-initial accuracy situations, similar to Fitneva and Christiansen (2015).
