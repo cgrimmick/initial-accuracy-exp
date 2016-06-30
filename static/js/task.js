@@ -10,9 +10,13 @@ var psiTurk = PsiTurk(uniqueId, adServerLoc);
 /*var mycondition = condition;  // these two variables are passed by the psiturk server process
 var mycounterbalance = counterbalance;  // they tell you which */
 
-var condition = _.sample([1,2]); // 1 = Low Initial Accuracy; 2 = High Initial Accuracy 
+//var condition = _.sample([1,2]); // 1 = Low Initial Accuracy; 2 = High Initial Accuracy 
+var mycondition = condition;  // these two variables are passed by the psiturk server process
+var mycounterbalance = counterbalance;  // they tell you which condition you have been assigned to
 var condition_name = "";
-if (condition===1) {condition_name = "Low Initial Accuracy" } else {condition_name = "High Initial Accuracy"}
+if (condition==="0") {condition_name = "Low Initial Accuracy" } else {condition_name = "High Initial Accuracy"}
+console.log(condition)
+console.log(condition_name)
 
 var num_words_studied = 18; 
 var list_repetitions = 3; 
@@ -45,9 +49,8 @@ psiTurk.preloadPages(pages);
 
 var instructionPages = [
 	"instructions/instruct-1.html",
-	//"instructions/instruct-quiz.html",
+	"instructions/instruct-quiz.html",
 	"instructions/instruct-famil.html"
-	
 ];
 
 var studyInstructions = [
@@ -142,7 +145,7 @@ var Familiarization = function() {
 		//					[1,3,5,7,9,11,13,15,17,0,2,4,6,8,10,12,14,16];
 		var liawordOrder =  [16,14,5,10,9,6,13,2,0,17,15,4,11,8,7,12,3,1]; // Remapped 12
 		var studystim = [];
-		if(condition===1){ // Low IA condition
+		if(condition==="0"){ // Low IA condition
 			console.log("low ia")
 			for(i = 0; i<num_words_studied; i++) {
 				var iW = liawordOrder[i];

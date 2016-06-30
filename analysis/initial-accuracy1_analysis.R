@@ -1,22 +1,19 @@
-# v1 used 18 pairs (+1 novel at test) repeated 4 times, with 2.5s per item per trial
-# (216 s total study time with 500ms ISI) -- 8 of 18 subjects were at ceiling though (!)
+# v1 used 18 pairs (+1 novel at test) repeated 3 times, with 3s per item per trial
+# (378 s total study time with 1000ms ISI) -- 6.3 min
 
-# v2 uses 22 pairs (+1 novel at test) repeated 3 times, with 2.5s per item per trial
-# (198 s total study time)
 require("ggplot2")
 
 preprocess <- function() {
-	instructdat = read.csv("mem_vs_xsl1_instructquiz_data.csv")
-	studydat = read.csv("mem_vs_xsl1_study_data.csv")
-	testdat = read.csv("mem_vs_xsl1_test_data.csv")
-	postqdat = read.csv("mem_vs_xsl1_postquiz_data.csv")
+	#instructdat = read.csv("initial-accuracy1_instructquiz_data.csv")
+	studydat = read.csv("initial-accuracy1_study_data.csv")
+	testdat = read.csv("initial-accuracy1_test_data.csv")
+	postqdat = read.csv("initial-accuracy1_postquiz_data.csv")
 	
 	print(paste(length(unique(testdat$uniqueId)), "subjects"))
-	# 1, although they didn't do that great...prob just left the default 'yes'
+	
 	cheaters = subset(postqdat, memory_aid=="yes")$uniqueId
 	print(paste(length(cheaters), "cheaters"))
 	# also see if anybody took a ridiculous number of times to do instruct quiz
-	# ...yep, same cheater :P
 
 	testdat = subset(testdat, !is.element(uniqueId,cheaters))
 	postqdat = subset(postqdat, !is.element(uniqueId,cheaters))
@@ -24,10 +21,7 @@ preprocess <- function() {
 	
 	testdat$condition = as.character(testdat$condition)
 	studydat$condition = as.character(studydat$condition)
-	# 1 or 2 pairs per trial:
-	testdat$pairs = with(testdat, ifelse(condition=="1pair_shuffle" | condition=="1pair_noshuffle", 1, 2)) 
-	# study trials shuffled/not:
-	testdat$shuffled = with(testdat, ifelse(condition=="1pair_shuffle" | condition=="2pair_shuffle", "yes", "no")) 
+	#testdat$InitAcc = with(testdat, ifelse(condition=="Low Initial Accuracy", "Low", "High")) 
 	
 	return(list(test=testdat, quiz=postqdat, study=studydat))
 }
@@ -35,11 +29,12 @@ preprocess <- function() {
 dat = preprocess()
 
 # 1 novel pair was tested for each subject:
-novel = subset(dat$test, studied==0)
+novel = subset(dat$test, is.na(init_word))
 mean(novel$correct) # .67 (more likely the more other items you got right?)
 
-agg_s = aggregate(cbind(correct, rt) ~ condition + uniqueId, data=dat$test, mean)
-summary(aov(correct ~ condition + Error(uniqueId), data=agg_s))
+agg_s = aggregate(cbind(correct, rt) ~ uniqueId + init_acc + condition, data=dat$test, mean)
+ag = aggregate(cbind(correct, rt) ~ init_acc + condition, data=agg_s, mean)
+summary(aov(correct ~ condition*init_acc + Error(uniqueId), data=agg_s))
 
 hist(agg_s$correct)
 

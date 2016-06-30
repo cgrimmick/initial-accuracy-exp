@@ -8,3 +8,7 @@ config2.txt
 custom.pyc
 
 participants.db
+
+*.csv
+
+*.json
