@@ -12,3 +12,19 @@ participants.db
 *.csv
 
 *.json
+
+analysis/readFitdata.R
+
+data/model.R
+
+data/initial-accuracy18afc_modelfits.pdf
+
+data/init_acc_studyData.RData
+
+data/export_data.py
+
+data/.Rhistory
+
+analysis/export_data.py
+
+analysis/export_data.py
