@@ -15,6 +15,13 @@
 # 
 # get_rand_ord()
 
+library(foreach)
+library(doParallel)
+no_cores = 4
+cl<-makeCluster(no_cores-1)
+registerDoParallel(cl)
+# had some warnings..."using 'C'"  
+
 source("ReadMturkData.R")
 testdat = read.csv("data/initial-accuracy1_test_data.csv", header=T) 
 testdat = na.omit(testdat) # get rid of the single novel pair tested per subject
@@ -24,25 +31,19 @@ get_subj_ord <- function(cur_subj_dat) {
   return(ord)
 }
 
-median_group_pars = c(0.6111021, 4.635534, 0.9956708)
 
-FitChristSSE <- function(par, humdat, cond, ord, regularize=F) {
+FitChristSSE <- function(par, humdat, cond, ord) {
   mdat = RunFitnevaChristiansenExp(par, cond, ord)
-  SSE = sum((humdat - mdat)^2)
-  if(regularize) {
-    #SSE = SSE + .002*sum( (par-c(0,0,1))^2 ) # penalize values far from 0 (or extreme decays)
-    SSE = SSE + .002*sum( (par-median_group_pars)^2 )
-  }
-  return(SSE) 
+  return(sum((humdat - mdat)^2)) # regularize parameters
 }
 
-RunFitnevaChristiansenExp <- function(par, cond, ord) {
+RunFitnevaChristiansenExp <- function(par, cond, ord, Nsubjects=2000, voc_sz=18) {
   # par = c(.2, 2, .95)
   # mdat = data.frame(Cond=c("Low IA","Low IA", "High IA", "High IA"), 
   #                   Item=c("Initially Accurate","Initially Inaccurate","Initially Accurate","Initially Inaccurate"),
   #                   Mean=NA, SD=NA)
-  X = par[1]*(par[3]^2)
-
+  X = par[1] #+par[2]
+  
   wordOrder = c(1,3,5,7,9,11,13,15,17,0,2,4,6,8,10,12,14,16) +1
   objOrder =  c(0,2,4,6,8,10,12,14,16,1,3,5,7,9,11,13,15,17) + 1
   
@@ -52,11 +53,24 @@ RunFitnevaChristiansenExp <- function(par, cond, ord) {
     fam_m[wordOrder[i],objOrder[i]] = X
   }
 
-  modp = model(par, ord=ord, m=fam_m) # does the training (on prefam matrix)
-  acc18afc = rep(NA, 18)
-  for(j in 1:18){
-    acc18afc[j] = modp[wordOrder[j],objOrder[j]] / sum(modp[wordOrder[j],])
-  }
+  #####acc18afc = rep(NA, 18)
+  #acc18afc = matrix(0, nrow=Nsubjects, ncol=voc_sz)
+  #for(s in 1:Nsubjects) {
+  #  modp = model(par, ord=ord, m=fam_m) # does the training (on prefam matrix)
+  #  for(j in 1:voc_sz){
+  #    ######acc18afc[j] = modp[wordOrder[j],objOrder[j]] / sum(modp[wordOrder[j],])
+  #    if(sum(modp[wordOrder[j],])==0) {
+  #      acc18afc[s,j] = 1/voc_sz
+  #    } else {
+  #      acc18afc[s,j] = modp[wordOrder[j],objOrder[j]] 
+  #    }
+  #  }
+  #}
+  
+  #runtime <- system.time({
+  acc18afc <- foreach(icount(Nsubjects), .combine = rbind)  %do%  model(par, ord=ord, m=fam_m)
+  #})[3]
+  acc18afc = colMeans(acc18afc)
 
   if(cond=="Low Initial Accuracy") {
     liawordOrder =  c(16,14,5,10,9,6,13,2,0,17,15,4,11,8,7,12,3,1) + 1
@@ -99,10 +113,10 @@ RunFitnevaChristiansenExp <- function(par, cond, ord) {
 require("DEoptim")
 
 fitBySubject <- function() {
-  source("FitChristmodel.R")
+  source("proposeverify_model_initacc.R") 
   subjs <- unique(as.character(testdat$uniqueId))
   agS = aggregate(correct ~ condition + init_acc + uniqueId, data=testdat, mean) 
-  parnames = c("X","lambda","alpha")
+  parnames = c("alpha","alpha_increase")
   agS[,parnames] = NA
   agS$SSE = NA
   agS$Model = NA
@@ -112,8 +126,8 @@ fitBySubject <- function() {
     srows = which(agS$uniqueId==s)
     scond = agS[srows,]$condition[1]
     sperf = agS[srows,]$correct
-    fit = DEoptim(FitChristSSE, lower=c(.001,.1,.5), upper=c(2,20,1), DEoptim.control(reltol=.001, NP=100), humdat=sperf, 
-                  cond=scond, ord=ord, regularize=T) # 
+    fit = DEoptim(FitChristSSE, lower=c(.0001,.0001), upper=c(1,1), DEoptim.control(reltol=.001, NP=50, itermax=20), humdat=sperf, cond=scond, ord=ord) # 
+    # RunFitnevaChristiansenExp(c(.5,.2), scond, ord)
     mperf = RunFitnevaChristiansenExp(fit$optim$bestmem, scond, ord) # fit$optim$bestmem c(2.0, 0.787, 0.684)
     agS[srows,]$SSE = fit$optim$bestval # .0002
     for(row in srows) {
@@ -125,23 +139,9 @@ fitBySubject <- function() {
 }
 
 sfits = fitBySubject()
+save(sfits, file="subject_fits_withReg_proposeverify.RData")
 
-print(paste("Median SSE:",round(median(sfits$SSE),4),"sd:",round(sd(sfits$SSE),4)))
-bad_fits = subset(sfits, SSE > sum(median(sfits$SSE)+sd(sfits$SSE)))
-print(bad_fits) # mostly in the Low Init Acc condition, subjects which had very high performance (e.g., 100%), 
-# or higher for init-inacc than init-acc -- the model just can't do that
-aggregate(correct ~ condition + init_acc, data=bad_fits, mean) 
-
-# how many subjects had higher accuracy on initially-inaccurate vs. initially-inaccurate?
-# (and can the model ever do that?)
-iacc = subset(sfits, init_acc=="True")
-iinacc = subset(sfits, init_acc=="False")
-ia_gt_inac = iacc$correct - iinacc$correct
-sort(ia_gt_inac) # six subjects had lower accuracy on initially-inaccurate pairings (four of those were only .083 worse at initially-accurate)
-hist(iacc$correct - iinacc$correct)
-
-
-save(sfits, file="subject_fits_withReg.RData")
+stopCluster(cl)
 
 # adults
 # fit = DEoptim(FitChristSSE, lower=c(.001,.1,.5), upper=c(2,20,1), DEoptim.control(reltol=.001, NP=100), humdat=humdat) # 
@@ -151,8 +151,7 @@ save(sfits, file="subject_fits_withReg.RData")
 # mad$Cond = factor(mad$Cond, levels=c("Low IA", "High IA"))
 
 require("ggplot2")
-load("subject_fits_withReg.RData") # 
-#load("subject_fits_withoutReg.RData") # mean SSE=.030
+load("subject_fits_withReg_proposeverify.RData")
 
 agg = aggregate(correct ~ condition + init_acc, data=sfits, mean) 
 agg$sd = aggregate(correct ~ condition + init_acc, data=sfits, sd)$correct
@@ -170,6 +169,6 @@ a <- ggplot(agg, aes(x=condition, y=correct, fill=init_acc)) + labs(x="Condition
   geom_hline(yintercept=1/18, linetype='dashed')
 #b <- a + geom_hline(yintercept=1/18, linetype='dashed') # + scale_fill_manual(values=c("red", "orange", "yellow"))
 print(a)
-ggsave("initial-accuracy18afc_model_fit_by_subject2.pdf", width=5, height=4)
+ggsave("initial-accuracy18afc_model_fit_by_subject_proposeverify.pdf", width=5, height=4)
 dev.off()
 

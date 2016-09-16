@@ -1,6 +1,6 @@
 getStudyData <- function() {
-Studyraw <- read.csv("~/Documents/Lab/Gureckis/initial_accuracyXSL/initial-accuracy-exp/data/initial_accuracy1_study_data.csv",header = TRUE)
-Testraw <- read.csv("~/Documents/Lab/Gureckis/initial_accuracyXSL/initial-accuracy-exp/data/initial_accuracy1_test_data.csv", header = TRUE)
+Studyraw <- read.csv("~/Documents/Lab/Gureckis/initial_accuracyXSL/initial-accuracy-exp/analysis/data/initial_accuracy1_study_data.csv",header = TRUE)
+Testraw <- read.csv("~/Documents/Lab/Gureckis/initial_accuracyXSL/initial-accuracy-exp/analysis/data/initial_accuracy1_test_data.csv", header = TRUE)
 
 testSs = unique(Testraw$uniqueId)
 
