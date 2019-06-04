@@ -28,3 +28,6 @@ data/.Rhistory
 analysis/export_data.py
 
 analysis/export_data.py
+static/images/.DS_Store
+static/.DS_Store
+.DS_Store
