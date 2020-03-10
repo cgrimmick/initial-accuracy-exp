@@ -64,12 +64,14 @@ var testInstructions = [
 var stage = [
 "stage.html"
 ];
-var database = new Firebase('https://initial-accuracy1.firebaseio.com/');
-var dbfamil = database.child("familiarization");
-var dbstudy = database.child("study"); // store data from each phase separately
-var dbtest = database.child("test");
-var dbinstructq = database.child("instructquiz");
-var dbpostq = database.child("postquiz");
+// formerly used firebase, but it doesn't work the same way anymore
+//var database = new Firebase('https://initial-accuracy1.firebaseio.com/');
+//var dbfamil = database.child("familiarization");
+//var dbstudy = database.child("study"); // store data from each phase separately
+//var dbtest = database.child("test");
+//var dbinstructq = database.child("instructquiz");
+//var dbpostq = database.child("postquiz");
+
 // callback to let us know when a new message is added: database.on('child_added', function(snapshot) {
 //	var msg = snapshot.val();
 //	doSomething(msg.name, msg.text);
@@ -93,10 +95,10 @@ var instructioncheck = function() {
 	if (document.getElementById('icheck4').checked) {corr[3]=1;}
 	var checksum = corr.reduce(function(tot,num){ return tot+num }, 0);
 	console.log('instructquiz num_correct: ' + checksum);
-	psiTurk.recordTrialData({'phase':'instructquiz', 'status':'submit', 'num_correct':checksum});
 	var timestamp = new Date().getTime();
-	dat = {'uniqueId':uniqueId, 'condnum':mycondition, 'phase':'instructquiz', 'num_correct':checksum, 'time':timestamp};
-	dbinstructq.push(dat);
+	psiTurk.recordTrialData({'phase':'instructquiz', 'status':'submit', 'num_correct':checksum, 'uniqueId':uniqueId, 'condnum':mycondition, 'time':timestamp});
+	//dat = {'uniqueId':uniqueId, 'condnum':mycondition, 'phase':'instructquiz', 'num_correct':checksum, 'time':timestamp};
+	//dbinstructq.push(dat);
 
 	if (checksum===4){
 		document.getElementById("checkquiz").style.display = "none"; // hide the submit button
@@ -229,7 +231,7 @@ var Familiarization = function() {
 			//console.log(dat);
 			psiTurk.recordTrialData(dat);
 			console.log("record")
-			dbfamil.push(dat);
+			//dbfamil.push(dat);
 		}
 	};
 
@@ -320,7 +322,7 @@ var Study = function(studystim, true_lexicon, blocks, wordon, words, objs) {
 				'word':stim[i].word, 'obj':stim[i].obj, 'duration':time, 'timestamp':wordon};
 			//console.log(dat);
 			psiTurk.recordTrialData(dat);
-			dbstudy.push(dat);
+			//dbstudy.push(dat);
 		}
 	};
 
@@ -480,10 +482,10 @@ var Test = function(true_lexicon) {
 				 'init_word':stim.init_word, "word_ind":stim.word_ind, "corr_obj_ind":stim.obj_ind, "init_word_ind":stim.init_word_ind,
 					'response':d.obj, 'correct':correct, 'rt':rt}; // 'studyIndices':stim.studyIndices -- somehow record study...
 				//console.log(dat);
-				psiTurk.recordTrialData(dat);
 				dat.uniqueId = uniqueId;
 				dat.timestamp = wordon;
-				dbtest.push(dat);
+				psiTurk.recordTrialData(dat);
+				//dbtest.push(dat);
 				remove_stim();
 				setTimeout(function(){ next(); }, 500); // always 500 ISI
 			});
@@ -521,8 +523,7 @@ var Questionnaire = function() {
 	var error_message = "<h1>Oops!</h1><p>Something went wrong submitting your HIT. This might happen if you lose your internet connection. Press the button to resubmit.</p><button id='resubmit'>Resubmit</button>";
 
 	record_responses = function() {
-		psiTurk.recordTrialData({'phase':'postquestionnaire', 'status':'submit'});
-		dat = {'uniqueId':uniqueId, 'condition':condition_name, 'phase':'postquestionnaire'};
+		dat = {'uniqueId':uniqueId, 'condition':condition_name, 'phase':'postquestionnaire', 'status':'submit'};
 		$('textarea').each( function(i, val) {
 			psiTurk.recordUnstructuredData(this.id, this.value);
 			dat[this.id] = this.value;
@@ -531,7 +532,8 @@ var Questionnaire = function() {
 			psiTurk.recordUnstructuredData(this.id, this.value);
 			dat[this.id] = this.value;
 		});
-		dbpostq.push(dat);
+		psiTurk.recordTrialData(dat);
+		//dbpostq.push(dat);
 	};
 
 	prompt_resubmit = function() {
@@ -546,8 +548,7 @@ var Questionnaire = function() {
 		psiTurk.saveData({
 			success: function() {
 			    clearInterval(reprompt);
-                //psiTurk.computeBonus('compute_bonus', function(){}); // was finish()
-								psiTurk.completeHIT();
+					psiTurk.completeHIT();
 			},
 			error: prompt_resubmit
 		});
@@ -562,8 +563,7 @@ var Questionnaire = function() {
 	    record_responses();
 	    psiTurk.saveData({
             success: function(){
-                //psiTurk.computeBonus('compute_bonus', function() {
-						    psiTurk.completeHIT();
+				psiTurk.completeHIT();
             },
             error: prompt_resubmit});
 	});
